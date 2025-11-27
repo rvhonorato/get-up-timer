@@ -37,36 +37,36 @@ impl User {
         Instant::now().duration_since(self.updated)
     }
 
+    pub fn message(&self) -> String {
+        match self.state {
+            State::Active => "<span foreground='#a6e3a1'> ● </span>".to_string(),
+            State::Idle => "<span foreground='#f9e2af'> ○ </span>".to_string(),
+            State::Alert => {
+                "<span foreground='#fab387' weight='bold' size='x-large'>GET UP</span>".to_string()
+            }
+        }
+    }
+
     pub fn write_state_to_file(&mut self) {
         let elapsed = self.time_in_current_state();
         let hours = elapsed.as_secs() / 3600;
         let minutes = (elapsed.as_secs() % 3600) / 60;
         let seconds = elapsed.as_secs() % 60;
 
-        let (text, tooltip) = if self.state == State::Active {
-            (
-                "<span foreground='#a6e3a1'> ● </span>".to_string(),
-                format!("Active: {:02}:{:02}:{:02}", hours, minutes, seconds),
-            )
-        } else {
-            (
-                "<span foreground='#f9e2af'> ○ </span>".to_string(),
-                format!("Idle: {:02}:{:02}:{:02}", hours, minutes, seconds),
-            )
-        };
+        let timestamp = format!("{:02}:{:02}:{:02}", hours, minutes, seconds);
 
-        let content = if self.state == State::Active && hours >= 1 {
-            serde_json::json!({
-        "text": "<span foreground='#fab387' weight='bold' size='x-large'>GET UP</span>",
-        "tooltip": format!("Active for {:02}:{:02}:{:02} - Time to move!", hours, minutes, seconds)
-    }).to_string()
-        } else {
-            serde_json::json!({
-                "text": text,
-                "tooltip": tooltip
-            })
-            .to_string()
+        let tooltip = match self.state {
+            State::Active => format!("Active: {}", timestamp),
+            State::Idle => format!("Idle: {}", timestamp),
+            State::Alert => format!("Alert: {}", timestamp),
         };
+        let text = self.message();
+
+        let content = serde_json::json!({
+            "text": text,
+            "tooltip": tooltip
+        })
+        .to_string();
 
         // Seek to beginning and overwrite
         if let Err(e) = self.state_file.seek(SeekFrom::Start(0)) {
@@ -96,4 +96,5 @@ impl User {
 pub enum State {
     Active,
     Idle,
+    Alert,
 }
