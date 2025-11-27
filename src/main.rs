@@ -3,11 +3,8 @@ use std::fs::{self};
 use std::io;
 use std::os::unix::fs::OpenOptionsExt;
 use std::os::unix::io::AsRawFd;
-use std::{
-    fs::File,
-    thread::sleep,
-    time::{Duration, SystemTime},
-};
+use std::time::Instant;
+use std::{fs::File, thread::sleep, time::Duration};
 
 const INPUT_BY_ID: &str = "/dev/input/by-id/";
 const INPUT_EVENT_SIZE: usize = 24;
@@ -21,31 +18,17 @@ impl InputDevices {
         let mut input: Vec<File> = vec![];
         for path in devices {
             let loc = path.unwrap().path().into_os_string().into_string().unwrap();
+            // NOTE: Use `mouse` here to also track the mouse
             if loc.contains("kbd") {
                 input.push(open_device(&loc));
             }
         }
         InputDevices(input)
     }
-}
 
-fn open_device(path: &str) -> File {
-    OpenOptions::new()
-        .read(true)
-        .custom_flags(libc::O_NONBLOCK)
-        .open(path)
-        .expect("Could not open device")
-}
-
-fn main() {
-    let devices = InputDevices::new();
-
-    let mut counter = 0;
-
-    loop {
-        let sys_time = SystemTime::now();
-        println!("{:?}", sys_time);
-        for device in &devices.0 {
+    // Go over the devices and see if any of them are active
+    fn is_active(&self) -> bool {
+        for device in &self.0 {
             let mut buffer = [0u8; INPUT_EVENT_SIZE];
             let fd = device.as_raw_fd();
 
@@ -54,7 +37,7 @@ fn main() {
 
             match result {
                 n if n > 0 => {
-                    println!("ACTIVITY")
+                    return true;
                 }
                 -1 => {
                     // Check errno
@@ -72,11 +55,81 @@ fn main() {
             }
         }
 
-        counter += 1;
-        sleep(Duration::new(1, 0));
+        return false;
+    }
+}
 
-        if counter == 60 {
-            break;
+fn open_device(path: &str) -> File {
+    OpenOptions::new()
+        .read(true)
+        .custom_flags(libc::O_NONBLOCK)
+        .open(path)
+        .expect("Could not open device")
+}
+
+#[derive(Debug)]
+struct User {
+    state: State,
+    updated: Instant,
+}
+
+impl User {
+    fn new() -> Self {
+        User {
+            state: State::Idle,
+            updated: Instant::now(),
         }
+    }
+
+    fn set_state(&mut self, new_state: State) {
+        self.state = new_state;
+        self.updated = Instant::now();
+
+        println!("Setting {:?}", self.state);
+    }
+
+    fn time_in_current_state(&self) -> Duration {
+        Instant::now().duration_since(self.updated)
+    }
+}
+
+#[derive(PartialEq, Debug)]
+enum State {
+    Active,
+    Idle,
+}
+
+fn main() {
+    let devices = InputDevices::new();
+
+    let mut user = User::new();
+
+    // Wait this ammount of time before marking the user idle
+    let inactive_cutoff = Duration::new(60, 0);
+
+    loop {
+        let device_state = devices.is_active();
+
+        match (&user.state, device_state) {
+            // User was idle and became active
+            (State::Idle, true) => {
+                println!("{:?}", user.time_in_current_state());
+                user.set_state(State::Active)
+            }
+            // User was active and became idle
+            (State::Active, false) => {
+                // Wait a bit before marking it as idle, maybe the user is thinking (:
+                if user.time_in_current_state() >= inactive_cutoff {
+                    println!("{:?}s passed, the user is idle!", inactive_cutoff);
+                    user.set_state(State::Idle)
+                } else {
+                    println!("User is not touching anything...")
+                }
+            }
+            // For all other cases, no change
+            _ => (),
+        };
+
+        sleep(Duration::from_millis(100));
     }
 }
