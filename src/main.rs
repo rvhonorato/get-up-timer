@@ -1,13 +1,14 @@
 use std::fs::OpenOptions;
-use std::fs::{self};
-use std::io;
+use std::fs::{self, File};
+use std::io::{self, Seek, SeekFrom, Write};
 use std::os::unix::fs::OpenOptionsExt;
 use std::os::unix::io::AsRawFd;
 use std::time::Instant;
-use std::{fs::File, thread::sleep, time::Duration};
+use std::{thread::sleep, time::Duration};
 
 const INPUT_BY_ID: &str = "/dev/input/by-id/";
 const INPUT_EVENT_SIZE: usize = 24;
+const STATE_FILE: &str = "/tmp/user_state";
 
 #[derive(Debug)]
 struct InputDevices(Vec<File>);
@@ -19,7 +20,7 @@ impl InputDevices {
         for path in devices {
             let loc = path.unwrap().path().into_os_string().into_string().unwrap();
             // NOTE: Use `mouse` here to also track the mouse
-            if loc.contains("kbd") {
+            if loc.contains("kbd") || loc.contains("mouse") {
                 input.push(open_device(&loc));
             }
         }
@@ -71,13 +72,21 @@ fn open_device(path: &str) -> File {
 struct User {
     state: State,
     updated: Instant,
+    state_file: File,
 }
 
 impl User {
     fn new() -> Self {
+        let state_file = OpenOptions::new()
+            .write(true)
+            .create(true)
+            .truncate(true)
+            .open(STATE_FILE)
+            .expect("Failed to open state file");
         User {
             state: State::Idle,
             updated: Instant::now(),
+            state_file,
         }
     }
 
@@ -91,6 +100,40 @@ impl User {
     fn time_in_current_state(&self) -> Duration {
         Instant::now().duration_since(self.updated)
     }
+
+    fn write_state_to_file(&mut self) {
+        let elapsed = self.time_in_current_state();
+        let hours = elapsed.as_secs() / 3600;
+        let minutes = (elapsed.as_secs() % 3600) / 60;
+        let seconds = elapsed.as_secs() % 60;
+
+        let content = format!(
+            "{:?} {:02}:{:02}:{:02}\n",
+            self.state, hours, minutes, seconds
+        );
+
+        // Seek to beginning and overwrite
+        if let Err(e) = self.state_file.seek(SeekFrom::Start(0)) {
+            eprintln!("Failed to seek state file: {}", e);
+            return;
+        }
+
+        if let Err(e) = self.state_file.write_all(content.as_bytes()) {
+            eprintln!("Failed to write state file: {}", e);
+            return;
+        }
+
+        // Truncate in case new content is shorter than old content
+        if let Err(e) = self.state_file.set_len(content.len() as u64) {
+            eprintln!("Failed to truncate state file: {}", e);
+            return;
+        }
+
+        // Flush to ensure it's written immediately
+        if let Err(e) = self.state_file.flush() {
+            eprintln!("Failed to flush state file: {}", e);
+        }
+    }
 }
 
 #[derive(PartialEq, Debug)]
@@ -101,8 +144,9 @@ enum State {
 
 fn main() {
     let devices = InputDevices::new();
-
     let mut user = User::new();
+
+    user.write_state_to_file();
 
     // Wait this ammount of time before marking the user idle
     let inactive_cutoff = Duration::new(60, 0);
@@ -127,9 +171,9 @@ fn main() {
                 }
             }
             // For all other cases, no change
-            _ => (),
+            _ => user.write_state_to_file(),
         };
 
-        sleep(Duration::from_millis(100));
+        sleep(Duration::from_millis(1000));
     }
 }
