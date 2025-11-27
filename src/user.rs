@@ -43,10 +43,30 @@ impl User {
         let minutes = (elapsed.as_secs() % 3600) / 60;
         let seconds = elapsed.as_secs() % 60;
 
-        let content = format!(
-            "{:?} {:02}:{:02}:{:02}\n",
-            self.state, hours, minutes, seconds
-        );
+        let (text, tooltip) = if self.state == State::Active {
+            (
+                "<span foreground='#a6e3a1'> ● </span>".to_string(),
+                format!("Active: {:02}:{:02}:{:02}", hours, minutes, seconds),
+            )
+        } else {
+            (
+                "<span foreground='#f9e2af'> ○ </span>".to_string(),
+                format!("Idle: {:02}:{:02}:{:02}", hours, minutes, seconds),
+            )
+        };
+
+        let content = if self.state == State::Active && hours >= 1 {
+            serde_json::json!({
+        "text": "<span foreground='#fab387' weight='bold' size='x-large'>GET UP</span>",
+        "tooltip": format!("Active for {:02}:{:02}:{:02} - Time to move!", hours, minutes, seconds)
+    }).to_string()
+        } else {
+            serde_json::json!({
+                "text": text,
+                "tooltip": tooltip
+            })
+            .to_string()
+        };
 
         // Seek to beginning and overwrite
         if let Err(e) = self.state_file.seek(SeekFrom::Start(0)) {

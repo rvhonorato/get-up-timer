@@ -6,3 +6,4 @@ edition = "2024"
 [dependencies]
 libc = "*"
 time = "*"
+serde_json = "*"
