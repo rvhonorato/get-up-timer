@@ -93,8 +93,6 @@ impl User {
     fn set_state(&mut self, new_state: State) {
         self.state = new_state;
         self.updated = Instant::now();
-
-        println!("Setting {:?}", self.state);
     }
 
     fn time_in_current_state(&self) -> Duration {
@@ -156,18 +154,12 @@ fn main() {
 
         match (&user.state, device_state) {
             // User was idle and became active
-            (State::Idle, true) => {
-                println!("{:?}", user.time_in_current_state());
-                user.set_state(State::Active)
-            }
+            (State::Idle, true) => user.set_state(State::Active),
             // User was active and became idle
             (State::Active, false) => {
                 // Wait a bit before marking it as idle, maybe the user is thinking (:
                 if user.time_in_current_state() >= inactive_cutoff {
-                    println!("{:?}s passed, the user is idle!", inactive_cutoff);
                     user.set_state(State::Idle)
-                } else {
-                    println!("User is not touching anything...")
                 }
             }
             // For all other cases, no change
