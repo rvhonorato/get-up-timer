@@ -12,7 +12,7 @@ use std::{thread::sleep, time::Duration};
 const ALERT_TRIGGER: Duration = Duration::from_secs(60 * 60); // 1 hour
 
 // Duration needed to clear the alert, this is your break!
-const BREAK_DURATION: Duration = Duration::from_secs(60 * 10); // 10 minutes
+const BREAK_DURATION: Duration = Duration::from_secs(60 * 5); // 5 minutes
 
 // Duration to define that the user is idle
 // Note: once the user is set to idle, the active timer will reset, so take this
