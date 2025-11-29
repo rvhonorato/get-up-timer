@@ -2,7 +2,13 @@
 name = "get-up-timer"
 version = "0.1.0"
 edition = "2024"
+description = "A simple daemon that monitors keyboard and mouse activity and reminds you to take breaks"
+license = "MIT"
+repository = "https://github.com/rvhonorato/get-up-timer"
+readme = "README.md"
+keywords = ["daemon", "break-timer", "activity-monitor", "linux", "systemd"]
+categories = ["command-line-utilities"]
 
 [dependencies]
-libc = "*"
-serde_json = "*"
+libc = "0.2"
+serde_json = "1"
