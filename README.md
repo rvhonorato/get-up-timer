@@ -45,8 +45,6 @@ After=multi-user.target
 
 [Service]
 ExecStart=/path/to/get-up-timer
-# For testing with debug mode:
-# ExecStart=/path/to/get-up-timer --debug
 Restart=on-failure
 
 [Install]
