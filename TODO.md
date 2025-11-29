@@ -1,6 +1,6 @@
 # TODO
 
-This that could be improved in this code
+Things that could be improved in this code
 
 ## Fix these first
 
