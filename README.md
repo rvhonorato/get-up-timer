@@ -4,7 +4,7 @@ A simple daemon that monitors your keyboard and mouse activity and reminds you t
 
 ## Motivation
 
-I often lose track of time and forget to take breaks, so I wrote this daemon to keep track of my activity and remind me when its time to take a break! (:
+I often lose track of time and forget to take breaks, so I spent way too much time writing this daemon to keep track of my activity and remind me when its time to take a break! (:
 
 Instead of checking for activity indirectly I decided to just use the `/dev/input/by-id` interface to measure activity directly. This daemon can identify mouse and keyboard devices so it should be compatible anywhere (at least on Linux).
 
