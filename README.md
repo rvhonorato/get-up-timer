@@ -72,11 +72,15 @@ sudo systemctl status get-up-timer
 If you're using Waybar, just add this to your config:
 
 ```json
-"custom/get-up-timer": {
+ "custom/user-state": {
     "exec": "cat /tmp/user_state",
+    "interval": 1,
     "return-type": "json",
-    "interval": 1
-}
+    "format": "{}",
+    "tooltip": true,
+    "tooltip-format": "{}",
+    "markup": true,
+  },
 ```
 
 ## Configuration
