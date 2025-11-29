@@ -11,6 +11,7 @@ Instead of checking for activity indirectly I decided to just use the `/dev/inpu
 ## What it does
 
 The daemon tracks your input device activity and cycles through three states:
+
 - **Active** - you're actively using your computer
 - **Idle** - you haven't touched anything for 5 minutes
 - **Alert** - you've been active for 1 hour without a break (time to get up!)
@@ -55,6 +56,7 @@ sudo systemctl start get-up-timer
 ```
 
 You can check if it's running with:
+
 ```bash
 sudo systemctl status get-up-timer
 ```
@@ -74,6 +76,7 @@ If you're using Waybar, just add this to your config:
 ## Configuration
 
 Right now the timing values are hardcoded in `src/main.rs`:
+
 - Alert after 1 hour of activity
 - Break duration: 5 minutes
 - Idle timeout: 5 minutes
@@ -92,6 +95,7 @@ The state file is just JSON with Pango markup for pretty colors:
 ```
 
 The different states look like this:
+
 - **Active**: green dot
 - **Idle**: yellow dot
 - **Alert**: orange "GET UP" text (hard to miss!)
