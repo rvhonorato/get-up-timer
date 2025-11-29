@@ -1,5 +1,11 @@
 # get-up-timer
 
+![Crates.io License](https://img.shields.io/crates/l/get-up-timer)
+![Crates.io Version](https://img.shields.io/crates/v/get-up-timer)
+![Crates.io Total Downloads](https://img.shields.io/crates/d/get-up-timer)
+
+
+
 A simple daemon that monitors your keyboard and mouse activity and reminds you to take breaks.
 
 ## Motivation
