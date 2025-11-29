@@ -85,6 +85,6 @@ fn main() {
 
         user.write_state_to_file();
 
-        sleep(Duration::from_millis(10));
+        sleep(Duration::from_millis(500));
     }
 }
