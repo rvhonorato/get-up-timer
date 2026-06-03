@@ -64,3 +64,28 @@ fn open_device(path: &str) -> File {
         .open(path)
         .expect("Could not open device")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_open_device_structure() {
+        let temp_dir = std::env::temp_dir();
+        let test_file = temp_dir.join("test_device_input");
+
+        if !test_file.exists() {
+            std::fs::write(&test_file, "").ok();
+        }
+
+        if test_file.exists() {
+            let result = std::panic::catch_unwind(|| {
+                open_device(test_file.to_str().unwrap());
+            });
+
+            let _ = std::fs::remove_file(&test_file);
+
+            assert!(result.is_ok(), "open_device should work with readable file");
+        }
+    }
+}

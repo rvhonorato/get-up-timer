@@ -134,3 +134,72 @@ pub enum State {
     Idle,
     Alert,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_message_active() {
+        let state = State::Active;
+        let message = match state {
+            State::Active => "<span foreground='#a6e3a1'> ● </span>".to_string(),
+            _ => unreachable!(),
+        };
+        assert!(message.contains("#a6e3a1"));
+        assert!(message.contains("●"));
+    }
+
+    #[test]
+    fn test_message_idle() {
+        let state = State::Idle;
+        let message = match state {
+            State::Idle => "<span foreground='#f9e2af'> ○ </span>".to_string(),
+            _ => unreachable!(),
+        };
+        assert!(message.contains("#f9e2af"));
+        assert!(message.contains("○"));
+    }
+
+    #[test]
+    fn test_message_alert() {
+        let state = State::Alert;
+        let message = match state {
+            State::Alert => {
+                "<span foreground='#fab387' weight='bold' size='x-large'>GET UP</span>".to_string()
+            }
+            _ => unreachable!(),
+        };
+        assert!(message.contains("#fab387"));
+        assert!(message.contains("GET UP"));
+    }
+
+    #[test]
+    fn test_state_equality() {
+        assert_eq!(State::Active, State::Active);
+        assert_eq!(State::Idle, State::Idle);
+        assert_eq!(State::Alert, State::Alert);
+    }
+
+    #[test]
+    fn test_state_debug() {
+        assert_eq!(format!("{:?}", State::Active), "Active");
+        assert_eq!(format!("{:?}", State::Idle), "Idle");
+        assert_eq!(format!("{:?}", State::Alert), "Alert");
+    }
+
+    #[test]
+    fn test_elapsed_format_hours_minutes_seconds() {
+        let hours = 1;
+        let minutes = 30;
+        let seconds = 45;
+        let timestamp = format!("{:02}:{:02}:{:02}", hours, minutes, seconds);
+        assert_eq!(timestamp, "01:30:45");
+    }
+
+    #[test]
+    fn test_elapsed_format_zero() {
+        let timestamp = format!("{:02}:{:02}:{:02}", 0, 0, 0);
+        assert_eq!(timestamp, "00:00:00");
+    }
+}

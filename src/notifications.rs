@@ -92,21 +92,65 @@ impl NotificationManager {
     }
 }
 
-pub fn snooze(minutes: u64) {
-    let path = Path::new(SNOOZE_FILE);
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::Config;
+    use std::fs;
 
-    match std::fs::write(path, minutes.to_string()) {
-        Ok(_) => println!("Snoozed for {} minutes", minutes),
-        Err(e) => eprintln!("Failed to snooze: {}", e),
+    #[test]
+    fn test_notification_manager_new() {
+        let config = Config::default();
+        let manager = NotificationManager::new(&config);
+        assert!(manager.should_notify());
     }
-}
 
-pub fn clear_snooze() {
-    let path = Path::new(SNOOZE_FILE);
-    let _ = std::fs::remove_file(path);
-}
+    #[test]
+    fn test_should_notify_logic() {
+        let mut config = Config::default();
+        config.notifications.sound_enabled = true;
+        config.notifications.desktop_notifications = true;
 
-pub fn is_snoozed() -> bool {
-    let path = Path::new(SNOOZE_FILE);
-    !path.exists()
+        let manager = NotificationManager::new(&config);
+        assert!(manager.should_notify());
+    }
+
+    #[test]
+    fn test_clear_notify_script() {
+        let test_notify = "/tmp/get-up-timer_test_notify_script";
+        const ORIGINAL_NOTIFY: &str = "/tmp/get-up-timer_notify";
+
+        fs::write(test_notify, "test").ok();
+
+        if Path::new(ORIGINAL_NOTIFY).exists() {
+            fs::remove_file(ORIGINAL_NOTIFY).ok();
+        }
+
+        fs::write(ORIGINAL_NOTIFY, "test").ok();
+
+        let manager = NotificationManager::new(&Config::default());
+        manager.clear_notify_script();
+
+        assert!(!Path::new(ORIGINAL_NOTIFY).exists());
+
+        let _ = fs::remove_file(test_notify);
+    }
+
+    #[test]
+    fn test_notification_state_changes() {
+        let mut config = Config::default();
+        config.notifications.sound_enabled = false;
+        config.notifications.desktop_notifications = false;
+
+        let mut manager = NotificationManager::new(&config);
+
+        manager.send_notification(State::Active);
+        assert!(manager.last_notification.is_none());
+
+        manager.send_notification(State::Idle);
+        assert!(manager.last_notification.is_none());
+
+        manager.send_notification(State::Alert);
+        assert!(manager.last_notification.is_some());
+    }
 }

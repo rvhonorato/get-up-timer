@@ -29,9 +29,6 @@ pub struct NotificationsConfig {
     pub sound_path: Option<String>,
     #[serde(default = "default_true")]
     pub desktop_notifications: bool,
-    /// Snooze duration in minutes when the snooze file is detected.
-    #[serde(default = "default_snooze")]
-    pub snooze_minutes: u64,
 }
 
 // Default values
@@ -43,9 +40,6 @@ fn default_break_after() -> u64 {
 }
 fn default_idle_after() -> u64 {
     5
-}
-fn default_snooze() -> u64 {
-    15
 }
 fn default_true() -> bool {
     true
@@ -67,7 +61,6 @@ impl Default for NotificationsConfig {
             sound_enabled: default_true(),
             sound_path: None,
             desktop_notifications: default_true(),
-            snooze_minutes: default_snooze(),
         }
     }
 }
@@ -149,8 +142,71 @@ impl Config {
     pub fn idle_duration(&self) -> Duration {
         Duration::from_secs(self.timing.idle_after_minutes * 60)
     }
+}
 
-    pub fn snooze_duration(&self) -> Duration {
-        Duration::from_secs(self.notifications.snooze_minutes * 60)
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+
+    #[test]
+    fn test_default_config() {
+        let config = Config::default();
+        assert_eq!(config.timing.alert_after_minutes, 60);
+        assert_eq!(config.timing.break_after_minutes, 5);
+        assert_eq!(config.timing.idle_after_minutes, 5);
+        assert!(config.notifications.sound_enabled);
+        assert!(config.notifications.desktop_notifications);
+    }
+
+    #[test]
+    fn test_alert_duration() {
+        let mut config = Config::default();
+        config.timing.alert_after_minutes = 30;
+        assert_eq!(config.alert_duration(), Duration::from_secs(30 * 60));
+    }
+
+    #[test]
+    fn test_break_duration() {
+        let mut config = Config::default();
+        config.timing.break_after_minutes = 10;
+        assert_eq!(config.break_duration(), Duration::from_secs(10 * 60));
+    }
+
+    #[test]
+    fn test_idle_duration() {
+        let mut config = Config::default();
+        config.timing.idle_after_minutes = 2;
+        assert_eq!(config.idle_duration(), Duration::from_secs(2 * 60));
+    }
+
+    #[test]
+    fn test_custom_config() {
+        let temp_dir = std::env::temp_dir();
+        let config_path = temp_dir.join("get_up_timer_test.toml");
+
+        let content = r#"
+[timing]
+alert_after_minutes = 45
+break_after_minutes = 10
+idle_after_minutes = 3
+
+[notifications]
+sound_enabled = false
+desktop_notifications = true
+snooze_minutes = 20
+"#;
+
+        fs::write(&config_path, content).unwrap();
+
+        let config = Config::load(Some(&config_path));
+
+        assert_eq!(config.timing.alert_after_minutes, 45);
+        assert_eq!(config.timing.break_after_minutes, 10);
+        assert_eq!(config.timing.idle_after_minutes, 3);
+        assert!(!config.notifications.sound_enabled);
+        assert!(config.notifications.desktop_notifications);
+
+        fs::remove_file(&config_path).ok();
     }
 }
