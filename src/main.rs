@@ -7,10 +7,12 @@ use crate::config::Config;
 use crate::devices::InputDevices;
 use crate::notifications::NotificationManager;
 use crate::user::{State, User};
+use std::path::PathBuf;
 use std::{thread::sleep, time::Duration};
 
 fn main() {
-    let config = Config::load(None);
+    let config_path = std::env::args().nth(1).map(PathBuf::from);
+    let config = Config::load(config_path.as_deref());
     let devices = InputDevices::new();
     let mut user = User::new();
     let mut notifier = NotificationManager::new(&config);

@@ -1,44 +1,30 @@
+use std::fs;
 use std::path::Path;
-use std::process::Command;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 use crate::config::Config;
 use crate::user::State;
 
 const SNOOZE_FILE: &str = "/tmp/get_up_snooze";
+const NOTIFY_SCRIPT_FILE: &str = "/tmp/get-up-timer_notify";
 
 pub struct NotificationManager {
     last_notification: Option<Instant>,
-    repeat_interval: Option<Duration>,
     config: Config,
 }
 
 impl NotificationManager {
     pub fn new(config: &Config) -> Self {
-        let repeat_interval = config
-            .notifications
-            .repeat_interval_minutes
-            .map(|m| Duration::from_secs(m * 60));
         NotificationManager {
             last_notification: None,
-            repeat_interval,
             config: config.clone(),
         }
     }
 
-    pub fn should_notify(&self, current_state: &State) -> bool {
+    pub fn should_notify(&self) -> bool {
         if !self.config.notifications.sound_enabled && !self.should_desktop_notify() {
             return false;
         }
-
-        if *current_state == State::Alert
-            && let Some(repeat) = self.repeat_interval
-            && let Some(last) = self.last_notification
-            && last.elapsed() < repeat
-        {
-            return false;
-        }
-
         true
     }
 
@@ -51,76 +37,58 @@ impl NotificationManager {
     }
 
     pub fn send_notification(&mut self, state: State) {
-        if !self.should_notify(&state) {
+        if !self.should_notify() {
             return;
         }
 
         match state {
-            State::Active => (),
-            State::Idle => (),
+            State::Active => {
+                // Clear the notification script when returning to Active
+                self.clear_notify_script();
+            }
+            State::Idle => {
+                // Clear the notification script when going idle
+                self.clear_notify_script();
+            }
             State::Alert => {
-                self.send_alert_notification();
+                self.write_notify_script();
                 self.last_notification = Some(Instant::now());
             }
         }
     }
 
-    fn send_alert_notification(&self) {
-        let (title, message) = (
-            "get-up-timer",
-            "It's time to take a break! Get up and stretch.",
-        );
+    fn write_notify_script(&self) {
+        let mut script = String::new();
 
-        if self.should_desktop_notify() {
-            self.send_desktop_notification(title, message);
+        // Add desktop notification command
+        if self.should_desktop_notify() && self.config.notifications.desktop_notifications {
+            script.push_str(
+                "notify-send --app-name=get-up-timer --urgency=critical --category=im.received \"get-up-timer\" \"It is time to take a break! Get up and stretch.\"\n",
+            );
         }
 
-        self.send_sound_notification();
+        // Add sound command
+        if self.config.notifications.sound_enabled {
+            let sound_path = self
+                .config
+                .notifications
+                .sound_path
+                .as_ref()
+                .cloned()
+                .unwrap_or_else(|| {
+                    "/usr/share/sounds/freedesktop/stereo/phone-outgoing-busy.oga".to_string()
+                });
+            script.push_str(&format!("paplay {}\n", sound_path));
+        }
+
+        // Write the script to file
+        if !script.is_empty() && fs::write(NOTIFY_SCRIPT_FILE, script).is_err() {
+            eprintln!("Failed to write notification script");
+        }
     }
 
-    fn send_desktop_notification(&self, title: &str, message: &str) {
-        let result = Command::new("notify-send")
-            .arg("--app-name=get-up-timer")
-            .arg("--urgency")
-            .arg("critical")
-            .arg("--category")
-            .arg("im.received")
-            .arg(title)
-            .arg(message)
-            .status();
-
-        if let Err(e) = result {
-            eprintln!("Failed to send desktop notification: {}", e);
-        }
-    }
-
-    fn send_sound_notification(&self) {
-        if !self.config.notifications.sound_enabled {
-            return;
-        }
-
-        let sound_path = self
-            .config
-            .notifications
-            .sound_command
-            .as_ref()
-            .cloned()
-            .unwrap_or_else(|| {
-                "/usr/share/sounds/freedesktop/stereo/phone-outgoing-busy.oga".to_string()
-            });
-
-        let result = Command::new("paplay").arg(sound_path).status();
-
-        match result {
-            Ok(status) => {
-                if !status.success() {
-                    eprintln!("Failed to play sound");
-                }
-            }
-            Err(e) => {
-                eprintln!("Failed to play sound: {}", e);
-            }
-        }
+    fn clear_notify_script(&self) {
+        let _ = fs::remove_file(NOTIFY_SCRIPT_FILE);
     }
 }
 

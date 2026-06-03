@@ -26,12 +26,9 @@ pub struct NotificationsConfig {
     #[serde(default = "default_true")]
     pub sound_enabled: bool,
     #[serde(default)]
-    pub sound_command: Option<String>,
+    pub sound_path: Option<String>,
     #[serde(default = "default_true")]
     pub desktop_notifications: bool,
-    /// Re-send the alert notification this often while in Alert state. None = no repeat.
-    #[serde(default)]
-    pub repeat_interval_minutes: Option<u64>,
     /// Snooze duration in minutes when the snooze file is detected.
     #[serde(default = "default_snooze")]
     pub snooze_minutes: u64,
@@ -68,9 +65,8 @@ impl Default for NotificationsConfig {
     fn default() -> Self {
         Self {
             sound_enabled: default_true(),
-            sound_command: None,
+            sound_path: None,
             desktop_notifications: default_true(),
-            repeat_interval_minutes: None,
             snooze_minutes: default_snooze(),
         }
     }
