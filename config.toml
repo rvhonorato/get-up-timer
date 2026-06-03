@@ -1,0 +1,25 @@
+# Timing configuration
+[timing]
+# After this many minutes of continuous activity show "GET UP" alert
+alert_after_minutes = 60
+
+# While in Alert state:
+#  - after this many minutes of inactivity (idle), clear the alert and return to Idle
+break_after_minutes = 5
+
+# After this many minutes of inactivity (no input), transition from Active to Idle state
+idle_after_minutes = 5
+
+# Notifications configuration
+[notifications]
+# Whether sound notifications are enabled
+sound_enabled = true
+
+# Path to sound file to play when alert triggers (if sound_enabled = true)
+sound_path = "/usr/share/sounds/alert.wav"
+
+# Whether desktop notifications are enabled (using notify-send)
+desktop_notifications = true
+
+# Default snooze duration when using snooze command (minutes)
+# snooze_minutes = 15
