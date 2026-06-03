@@ -53,7 +53,7 @@ impl InputDevices {
             }
         }
 
-        return false;
+        false
     }
 }
 
