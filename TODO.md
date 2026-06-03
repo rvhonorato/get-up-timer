@@ -14,7 +14,6 @@ Things that could be improved in this code
 
 ## Security/Safety
 
-- /tmp/user_state vulnerable to symlink attacks, use XDG_RUNTIME_DIR or ~/.cache (?)
 - No file locking
 - unsafe block needs safety comments
 - Set explicit file permissions
@@ -35,7 +34,6 @@ Things that could be improved in this code
 
 ## Features/Config
 
-- Make timing constants configurable (CLI args or config file)
 - Signal handling for clean shutdown
 - Device filtering should be runtime option
 - Better error messages
