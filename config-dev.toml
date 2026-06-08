@@ -1,0 +1,9 @@
+[timing]
+alert_after = "20s"
+break_after = "10s"
+idle_after = "5s"
+
+[notifications]
+sound_enabled = false
+sound_path = "/usr/share/sounds/alert.wav"
+desktop_notifications = false

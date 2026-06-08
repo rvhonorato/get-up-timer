@@ -1,15 +1,18 @@
 # Timing configuration
+# Supports suffixes: s (seconds), m (minutes), h (hours)
 [timing]
 # After this duration of continuous activity show "GET UP" alert
-# Supports suffixes: s (seconds), m (minutes), h (hours)
-alert_after = "1m"
+alert_after = "1h"
 
 # While in Alert state:
 #  - after this duration of inactivity (idle), clear the alert and return to Idle
-break_after = "5s"
+break_after = "5m"
 
 # After this duration of inactivity (no input), transition from Active to Idle state
-idle_after = "5s"
+#  NOTE: If you are usually looking at the screen thinking or pondering the universe,
+#   you might need to increase this timer to avoid going into `IDLE` while you are 
+#   still sitting down. (:
+idle_after = "20s"
 
 # Notifications configuration
 [notifications]
@@ -21,6 +24,3 @@ sound_path = "/usr/share/sounds/alert.wav"
 
 # Whether desktop notifications are enabled (using notify-send)
 desktop_notifications = true
-
-# Default snooze duration when using snooze command (minutes)
-# snooze_minutes = 15
