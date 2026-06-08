@@ -50,6 +50,7 @@ fn main() {
 
                 if inactive_start.elapsed() >= config.break_duration() {
                     user.set_state(State::Idle);
+                    notifier.send_notification(State::Idle);
                     last_inactive_time = None;
                 }
             }
