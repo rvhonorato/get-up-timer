@@ -14,11 +14,19 @@ Instead of checking for activity indirectly, I decided to just use the `/dev/inp
 
 ## What it does
 
-The daemon tracks your input device activity and cycles through three states:
+The daemon tracks your input device activity and cycles through four states:
 
 - **Active** - you're actively using your computer
-- **Idle** - you haven't touched anything for 5 minutes (configurable)
-- **Alert** - you've been active for 1 hour without a break (time to get up!)
+- **Idle** - you haven't touched anything for a configurable duration (default: 30 seconds)
+- **Alert** - you've been active for a configurable duration without a break (default: 1 hour) - time to get up!
+- **Break** - you've stopped activity after an alert; the daemon waits for a break duration (default: 5 minutes) before returning to Idle
+
+The state machine works as follows:
+- Active → Idle (after `idle_after` duration of inactivity)
+- Active → Alert (after `alert_after` duration of continuous activity)
+- Alert → Break (after `idle_after` duration of inactivity)
+- Break → Idle (after `break_after` duration of inactivity)
+- Break → Alert (if you resume activity during your break)
 
 ## Installation
 
@@ -66,7 +74,7 @@ Note: It must be executed as root to have access to your input devices.
 `get-up-timer` will write files to your `/tmp` directory, and these files can be used in `waybar`.
 
 - `get-up-timer_elapsed`: a timestamp display showing for how long user has been in a given state
-- `get-up-timer_icon`: a simplified display showing only a green dot or a `GET UP` text
+- `get-up-timer_icon`: a simplified display showing state indicators (green dot for Active, orange circle for Idle, "GET UP" text for Alert, blue square for Break)
 - `get-up-timer_notify`: a notification script
 
 ```jsonc
@@ -86,28 +94,50 @@ Note: It must be executed as root to have access to your input devices.
 
 ### Configuration
 
+The daemon will search for configuration files in the following order:
+1. Path provided as command-line argument
+2. `$XDG_CONFIG_HOME/get-up-timer/config.toml`
+3. `/etc/get-up-timer/config.toml`
+
+If no configuration file is found, default values are used.
+
 An example configuration is provided:
 
 ```toml
-#=======================================================================================
+# Timing configuration
+# Supports suffixes: s (seconds), m (minutes), h (hours)
 [timing]
-# After this many minutes of continuous activity show "GET UP" alert
-alert_after_minutes = 60
-# While in Alert state: 
-#  - after this many minutes of inactivity (idle), clear the alert and return to Idle
-break_after_minutes = 5
-# After this many minutes of inactivity (no input), transition from Active to Idle state
-idle_after_minutes = 5
-#=======================================================================================
+# After this duration of continuous activity show "GET UP" alert
+alert_after = "1h"
+
+# While in Alert state:
+#  - after this duration of inactivity (idle), transition to Break state
+break_after = "5m"
+
+# After this duration of inactivity (no input), transition from Active to Idle state
+#  NOTE: If you are usually looking at the screen thinking or pondering the universe,
+#   you might need to increase this timer to avoid going into `IDLE` while you are 
+#   still sitting down. (:
+idle_after = "20s"
+
+# Notifications configuration
 [notifications]
 # Whether sound notifications are enabled
 sound_enabled = true
-# Path to sound file to play when alert triggers (using paplay)
+
+# Path to sound file to play when alert triggers (if sound_enabled = true)
 sound_path = "/usr/share/sounds/alert.wav"
+
 # Whether desktop notifications are enabled (using notify-send)
 desktop_notifications = true
-#=======================================================================================
 ```
+
+**Default values:**
+- `alert_after`: 1h
+- `break_after`: 5m
+- `idle_after`: 30s
+- `sound_enabled`: true
+- `desktop_notifications`: true
 
 ## Contributing
 
