@@ -182,10 +182,22 @@ mod tests {
     }
 
     #[test]
+    fn test_message_break() {
+        let state = State::Break;
+        let message = match state {
+            State::Break => "<span foreground='#89b4fa'> ▪ </span>".to_string(),
+            _ => unreachable!(),
+        };
+        assert!(message.contains("#89b4fa"));
+        assert!(message.contains("▪"));
+    }
+
+    #[test]
     fn test_state_equality() {
         assert_eq!(State::Active, State::Active);
         assert_eq!(State::Idle, State::Idle);
         assert_eq!(State::Alert, State::Alert);
+        assert_eq!(State::Break, State::Break);
     }
 
     #[test]
@@ -193,6 +205,7 @@ mod tests {
         assert_eq!(format!("{:?}", State::Active), "Active");
         assert_eq!(format!("{:?}", State::Idle), "Idle");
         assert_eq!(format!("{:?}", State::Alert), "Alert");
+        assert_eq!(format!("{:?}", State::Break), "Break");
     }
 
     #[test]

@@ -156,5 +156,10 @@ mod tests {
 
         manager.send_notification(State::Alert);
         assert!(manager.last_notification.is_some());
+
+        // Test Break state also sets last_notification
+        manager.last_notification = None;
+        manager.send_notification(State::Break);
+        assert!(manager.last_notification.is_some());
     }
 }

@@ -47,18 +47,12 @@ fn default_true() -> bool {
 
 fn parse_duration(s: &str) -> Duration {
     let s = s.trim();
-    if let Some(suffix) = s.strip_suffix('s') {
-        if let Ok(seconds) = suffix.parse::<u64>() {
-            return Duration::from_secs(seconds);
-        }
-    } else if let Some(suffix) = s.strip_suffix('m') {
-        if let Ok(minutes) = suffix.parse::<u64>() {
-            return Duration::from_secs(minutes * 60);
-        }
-    } else if let Some(suffix) = s.strip_suffix('h') {
-        if let Ok(hours) = suffix.parse::<u64>() {
-            return Duration::from_secs(hours * 3600);
-        }
+    if let Some(suffix) = s.strip_suffix('s') && let Ok(seconds) = suffix.parse::<u64>() {
+        return Duration::from_secs(seconds);
+    } else if let Some(suffix) = s.strip_suffix('m') && let Ok(minutes) = suffix.parse::<u64>() {
+        return Duration::from_secs(minutes * 60);
+    } else if let Some(suffix) = s.strip_suffix('h') && let Ok(hours) = suffix.parse::<u64>() {
+        return Duration::from_secs(hours * 3600);
     }
     Duration::from_secs(0)
 }
@@ -170,9 +164,9 @@ mod tests {
     #[test]
     fn test_default_config() {
         let config = Config::default();
-        assert_eq!(config.timing.alert_after, "1m");
-        assert_eq!(config.timing.break_after, "5s");
-        assert_eq!(config.timing.idle_after, "5s");
+        assert_eq!(config.timing.alert_after, "1h");
+        assert_eq!(config.timing.break_after, "5m");
+        assert_eq!(config.timing.idle_after, "30s");
         assert!(config.notifications.sound_enabled);
         assert!(config.notifications.desktop_notifications);
     }
@@ -180,19 +174,19 @@ mod tests {
     #[test]
     fn test_alert_duration() {
         let config = Config::default();
-        assert_eq!(config.alert_duration(), Duration::from_secs(60));
+        assert_eq!(config.alert_duration(), Duration::from_secs(3600));
     }
 
     #[test]
     fn test_break_duration() {
         let config = Config::default();
-        assert_eq!(config.break_duration(), Duration::from_secs(5));
+        assert_eq!(config.break_duration(), Duration::from_secs(300));
     }
 
     #[test]
     fn test_idle_duration() {
         let config = Config::default();
-        assert_eq!(config.idle_duration(), Duration::from_secs(5));
+        assert_eq!(config.idle_duration(), Duration::from_secs(30));
     }
 
     #[test]
