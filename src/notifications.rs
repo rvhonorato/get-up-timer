@@ -54,6 +54,10 @@ impl NotificationManager {
                 self.write_notify_script();
                 self.last_notification = Some(Instant::now());
             }
+            State::Break => {
+                self.write_notify_script();
+                self.last_notification = Some(Instant::now());
+            }
         }
     }
 

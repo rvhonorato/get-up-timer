@@ -53,6 +53,7 @@ impl User {
             State::Alert => {
                 "<span foreground='#fab387' weight='bold' size='x-large'>GET UP</span>".to_string()
             }
+            State::Break => "<span foreground='#89b4fa'> ▪ </span>".to_string(),
         }
     }
 
@@ -70,6 +71,10 @@ impl User {
                 "<span foreground='#fab387' weight='bold' size='x-large'>{}</span>",
                 timestamp
             ),
+            State::Break => format!(
+                "<span foreground='#89b4fa' weight='bold' size='x-large'>{}</span>",
+                timestamp
+            ),
         }
     }
 
@@ -85,6 +90,7 @@ impl User {
             State::Active => format!("Active: {}", timestamp),
             State::Idle => format!("Idle: {}", timestamp),
             State::Alert => format!("Alert: {}", timestamp),
+            State::Break => format!("Break: {}", timestamp),
         };
 
         // Write icon file
@@ -133,6 +139,7 @@ pub enum State {
     Active,
     Idle,
     Alert,
+    Break,
 }
 
 #[cfg(test)]
