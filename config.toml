@@ -1,14 +1,15 @@
 # Timing configuration
 [timing]
-# After this many minutes of continuous activity show "GET UP" alert
-alert_after_minutes = 60
+# After this duration of continuous activity show "GET UP" alert
+# Supports suffixes: s (seconds), m (minutes), h (hours)
+alert_after = "1m"
 
 # While in Alert state:
-#  - after this many minutes of inactivity (idle), clear the alert and return to Idle
-break_after_minutes = 5
+#  - after this duration of inactivity (idle), clear the alert and return to Idle
+break_after = "5s"
 
-# After this many minutes of inactivity (no input), transition from Active to Idle state
-idle_after_minutes = 5
+# After this duration of inactivity (no input), transition from Active to Idle state
+idle_after = "5s"
 
 # Notifications configuration
 [notifications]
