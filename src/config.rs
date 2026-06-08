@@ -14,11 +14,11 @@ pub struct Config {
 #[derive(Debug, Clone, Deserialize)]
 pub struct TimingConfig {
     #[serde(default = "default_alert_after")]
-    pub alert_after_minutes: u64,
+    pub alert_after: String,
     #[serde(default = "default_break_after")]
-    pub break_after_minutes: u64,
+    pub break_after: String,
     #[serde(default = "default_idle_after")]
-    pub idle_after_minutes: u64,
+    pub idle_after: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -32,25 +32,37 @@ pub struct NotificationsConfig {
 }
 
 // Default values
-fn default_alert_after() -> u64 {
-    60
+fn default_alert_after() -> String {
+    "1h".to_string()
 }
-fn default_break_after() -> u64 {
-    5
+fn default_break_after() -> String {
+    "5m".to_string()
 }
-fn default_idle_after() -> u64 {
-    5
+fn default_idle_after() -> String {
+    "30s".to_string()
 }
 fn default_true() -> bool {
     true
 }
 
+fn parse_duration(s: &str) -> Duration {
+    let s = s.trim();
+    if let Some(suffix) = s.strip_suffix('s') && let Ok(seconds) = suffix.parse::<u64>() {
+        return Duration::from_secs(seconds);
+    } else if let Some(suffix) = s.strip_suffix('m') && let Ok(minutes) = suffix.parse::<u64>() {
+        return Duration::from_secs(minutes * 60);
+    } else if let Some(suffix) = s.strip_suffix('h') && let Ok(hours) = suffix.parse::<u64>() {
+        return Duration::from_secs(hours * 3600);
+    }
+    Duration::from_secs(0)
+}
+
 impl Default for TimingConfig {
     fn default() -> Self {
         Self {
-            alert_after_minutes: default_alert_after(),
-            break_after_minutes: default_break_after(),
-            idle_after_minutes: default_idle_after(),
+            alert_after: default_alert_after(),
+            break_after: default_break_after(),
+            idle_after: default_idle_after(),
         }
     }
 }
@@ -132,15 +144,15 @@ impl Config {
     }
 
     pub fn alert_duration(&self) -> Duration {
-        Duration::from_secs(self.timing.alert_after_minutes * 60)
+        parse_duration(&self.timing.alert_after)
     }
 
     pub fn break_duration(&self) -> Duration {
-        Duration::from_secs(self.timing.break_after_minutes * 60)
+        parse_duration(&self.timing.break_after)
     }
 
     pub fn idle_duration(&self) -> Duration {
-        Duration::from_secs(self.timing.idle_after_minutes * 60)
+        parse_duration(&self.timing.idle_after)
     }
 }
 
@@ -152,32 +164,29 @@ mod tests {
     #[test]
     fn test_default_config() {
         let config = Config::default();
-        assert_eq!(config.timing.alert_after_minutes, 60);
-        assert_eq!(config.timing.break_after_minutes, 5);
-        assert_eq!(config.timing.idle_after_minutes, 5);
+        assert_eq!(config.timing.alert_after, "1h");
+        assert_eq!(config.timing.break_after, "5m");
+        assert_eq!(config.timing.idle_after, "30s");
         assert!(config.notifications.sound_enabled);
         assert!(config.notifications.desktop_notifications);
     }
 
     #[test]
     fn test_alert_duration() {
-        let mut config = Config::default();
-        config.timing.alert_after_minutes = 30;
-        assert_eq!(config.alert_duration(), Duration::from_secs(30 * 60));
+        let config = Config::default();
+        assert_eq!(config.alert_duration(), Duration::from_secs(3600));
     }
 
     #[test]
     fn test_break_duration() {
-        let mut config = Config::default();
-        config.timing.break_after_minutes = 10;
-        assert_eq!(config.break_duration(), Duration::from_secs(10 * 60));
+        let config = Config::default();
+        assert_eq!(config.break_duration(), Duration::from_secs(300));
     }
 
     #[test]
     fn test_idle_duration() {
-        let mut config = Config::default();
-        config.timing.idle_after_minutes = 2;
-        assert_eq!(config.idle_duration(), Duration::from_secs(2 * 60));
+        let config = Config::default();
+        assert_eq!(config.idle_duration(), Duration::from_secs(30));
     }
 
     #[test]
@@ -187,9 +196,9 @@ mod tests {
 
         let content = r#"
 [timing]
-alert_after_minutes = 45
-break_after_minutes = 10
-idle_after_minutes = 3
+alert_after = "45m"
+break_after = "10m"
+idle_after = "3m"
 
 [notifications]
 sound_enabled = false
@@ -201,12 +210,20 @@ snooze_minutes = 20
 
         let config = Config::load(Some(&config_path));
 
-        assert_eq!(config.timing.alert_after_minutes, 45);
-        assert_eq!(config.timing.break_after_minutes, 10);
-        assert_eq!(config.timing.idle_after_minutes, 3);
+        assert_eq!(config.alert_duration(), Duration::from_secs(45 * 60));
+        assert_eq!(config.break_duration(), Duration::from_secs(10 * 60));
+        assert_eq!(config.idle_duration(), Duration::from_secs(3 * 60));
         assert!(!config.notifications.sound_enabled);
         assert!(config.notifications.desktop_notifications);
 
         fs::remove_file(&config_path).ok();
+    }
+
+    #[test]
+    fn test_duration_parsing() {
+        assert_eq!(parse_duration("10s"), Duration::from_secs(10));
+        assert_eq!(parse_duration("1m"), Duration::from_secs(60));
+        assert_eq!(parse_duration("2h"), Duration::from_secs(7200));
+        assert_eq!(parse_duration("30"), Duration::from_secs(0));
     }
 }

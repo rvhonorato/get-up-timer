@@ -3,9 +3,25 @@ use std::fs::{self, File};
 use std::io::{self};
 use std::os::unix::fs::OpenOptionsExt;
 use std::os::unix::io::AsRawFd;
+use tracing::debug;
 
 const INPUT_BY_ID: &str = "/dev/input/by-id/";
 const INPUT_EVENT_SIZE: usize = 24;
+const POLL_TIMEOUT_MS: i32 = 100; // Wait up to 100ms per device for activity
+
+// Linux input event structure
+// See: https://www.kernel.org/doc/html/latest/input/input.html
+#[repr(C)]
+pub struct InputEvent {
+    pub time: libc::timeval,
+    pub type_: u16,
+    pub code: u16,
+    pub value: i32,
+}
+
+// Event types from linux/input-event-codes.h
+const EV_KEY: u16 = 0x01;
+const EV_REL: u16 = 0x02;
 
 #[derive(Debug)]
 pub struct InputDevices(Vec<File>);
@@ -16,7 +32,6 @@ impl InputDevices {
         let mut input: Vec<File> = vec![];
         for path in devices {
             let loc = path.unwrap().path().into_os_string().into_string().unwrap();
-            // NOTE: Use `mouse` here to also track the mouse
             if loc.contains("kbd") || loc.contains("mouse") {
                 input.push(open_device(&loc));
             }
@@ -25,30 +40,63 @@ impl InputDevices {
     }
 
     // Go over the devices and see if any of them are active
+    // Uses poll() to wait for events without burning CPU
     pub fn is_active(&self) -> bool {
         for device in &self.0 {
-            let mut buffer = [0u8; INPUT_EVENT_SIZE];
             let fd = device.as_raw_fd();
 
-            let result =
-                unsafe { libc::read(fd, buffer.as_mut_ptr() as *mut libc::c_void, buffer.len()) };
+            // Wait for activity on this device with timeout
+            let mut fds = [libc::pollfd {
+                fd,
+                events: libc::POLLIN,
+                revents: 0,
+            }];
 
-            match result {
-                n if n > 0 => {
-                    return true;
-                }
-                -1 => {
-                    // Check errno
+            let result = unsafe { libc::poll(fds.as_mut_ptr(), 1, POLL_TIMEOUT_MS) };
+
+            if result == -1 {
+                eprintln!("poll error on fd {}: {}", fd, io::Error::last_os_error());
+                continue;
+            }
+
+            if result == 0 {
+                // No activity within timeout - move to next device
+                debug!("No activity on fd={}", fd);
+                continue;
+            }
+
+            // Activity detected - drain ALL available events from this device
+            let mut buffer = [0u8; INPUT_EVENT_SIZE];
+            loop {
+                let n = unsafe {
+                    libc::read(fd, buffer.as_mut_ptr() as *mut libc::c_void, buffer.len())
+                };
+
+                if n == -1 {
                     let errno = io::Error::last_os_error().raw_os_error().unwrap_or(0);
-
                     if errno == libc::EAGAIN || errno == libc::EWOULDBLOCK {
-                        continue;
+                        // No more events to read
+                        break;
                     } else {
-                        eprintln!("Error reading from device: {}", io::Error::last_os_error());
+                        eprintln!("read error on fd {}: {}", fd, io::Error::last_os_error());
+                        break;
                     }
                 }
-                _ => {
-                    println!("something weird happened")
+
+                if n == INPUT_EVENT_SIZE as isize {
+                    let event = unsafe { &*(buffer.as_ptr() as *const InputEvent) };
+
+                    // Check for actual input events: key presses, mouse movement, etc.
+                    // EV_KEY (0x01) = keyboard/mouse buttons
+                    // EV_REL (0x02) = relative axis (mouse movement)
+                    // We ignore EV_SYN (0x00) synchronization events
+                    if (event.type_ == EV_KEY || event.type_ == EV_REL) && event.value != 0 {
+                        debug!(
+                            "device: {:?} ACTUAL event type={} code={} value={}",
+                            device, event.type_, event.code, event.value
+                        );
+                        return true;
+                    }
                 }
             }
         }

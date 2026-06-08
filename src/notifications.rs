@@ -54,6 +54,10 @@ impl NotificationManager {
                 self.write_notify_script();
                 self.last_notification = Some(Instant::now());
             }
+            State::Break => {
+                self.write_notify_script();
+                self.last_notification = Some(Instant::now());
+            }
         }
     }
 
@@ -151,6 +155,11 @@ mod tests {
         assert!(manager.last_notification.is_none());
 
         manager.send_notification(State::Alert);
+        assert!(manager.last_notification.is_some());
+
+        // Test Break state also sets last_notification
+        manager.last_notification = None;
+        manager.send_notification(State::Break);
         assert!(manager.last_notification.is_some());
     }
 }
