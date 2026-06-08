@@ -55,7 +55,6 @@ fn main() {
                 }
             }
             (State::Alert, true) => {
-                notifier.send_notification(State::Active);
                 last_inactive_time = None;
             }
             _ => {
