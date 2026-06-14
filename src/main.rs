@@ -42,6 +42,8 @@ fn main() {
         let device_active = devices.is_active();
         let elapsed_in_state = user.time_in_current_state();
 
+        notifier.clear_stale_pause(&user.state);
+
         match (&user.state, device_active) {
             (State::Idle, true) => {
                 warn!("State transition: Idle -> Active (device became active)");

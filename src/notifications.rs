@@ -100,6 +100,15 @@ impl NotificationManager {
     fn clear_pause_file(&self) {
         let _ = fs::remove_file(PAUSE_FILE);
     }
+
+    /// Pausing only makes sense while an alert is active. If the pause file
+    /// is created (or left over) outside of the Alert state, remove it so it
+    /// doesn't silently suppress a future alert.
+    pub fn clear_stale_pause(&self, state: &State) {
+        if *state != State::Alert {
+            self.clear_pause_file();
+        }
+    }
 }
 
 #[cfg(test)]
@@ -187,6 +196,28 @@ mod tests {
             manager.send_notification(state);
             assert!(!Path::new(PAUSE_FILE).exists());
         }
+    }
+
+    #[test]
+    fn test_clear_stale_pause() {
+        let _guard = PAUSE_FILE_LOCK.lock().unwrap();
+
+        let config = Config::default();
+        let manager = NotificationManager::new(&config);
+
+        // Pause created while not in Alert (e.g. during Active) is stale and removed.
+        for state in [State::Active, State::Idle, State::Break] {
+            fs::write(PAUSE_FILE, "").ok();
+            manager.clear_stale_pause(&state);
+            assert!(!Path::new(PAUSE_FILE).exists());
+        }
+
+        // Pause created during Alert is left in place.
+        fs::write(PAUSE_FILE, "").ok();
+        manager.clear_stale_pause(&State::Alert);
+        assert!(Path::new(PAUSE_FILE).exists());
+
+        let _ = fs::remove_file(PAUSE_FILE);
     }
 
     #[test]
