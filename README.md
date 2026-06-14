@@ -77,6 +77,10 @@ Note: It must be executed as root to have access to your input devices.
 - `get-up-timer_icon`: a simplified display showing state indicators (green dot for Active, orange circle for Idle, "GET UP" text for Alert, blue square for Break)
 - `get-up-timer_notify`: a notification script
 
+### Pausing notifications
+
+If a file is present at `/tmp/get-up-timer_pause_notification`, all notifications (sound and desktop) are suppressed, regardless of state. This file is not managed by the daemon itself — create it from an external actor (e.g. a `waybar` click handler) to pause notifications, and remove it to resume them.
+
 ```jsonc
   "custom/get-up-timer": {
     "exec": "cat /tmp/get-up-timer_elapsed",
