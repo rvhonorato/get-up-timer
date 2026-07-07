@@ -27,20 +27,9 @@ jobs:
         run: |
           rustup component add clippy
           curl -sL https://github.com/xd009642/tarpaulin/releases/latest/download/cargo-tarpaulin-x86_64-unknown-linux-musl.tar.gz | tar xz -C /usr/local/bin
-          curl -Ls https://coverage.codacy.com/get.sh -o /tmp/codacy.sh
 
       - name: Run clippy
         run: cargo clippy -- -D warnings
 
       - name: Run tests with coverage
-        run: cargo tarpaulin --engine llvm --out Xml --output-dir ./coverage
-
-      - name: Upload coverage to Codacy
-        env:
-          CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}
-        run: |
-          if [ -n "$CODACY_PROJECT_TOKEN" ]; then
-            bash /tmp/codacy.sh report -r coverage/cobertura.xml
-          else
-            echo "CODACY_PROJECT_TOKEN not set, skipping upload"
-          fi
+        run: cargo tarpaulin --engine llvm --fail-under 25
