@@ -8,67 +8,39 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  test:
+  ci:
     runs-on: codeberg-small
     container:
       image: docker.io/library/rust:1
 
     steps:
       - name: Checkout code
-        uses: https://code.forgejo.org/actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        # the remote is the source of truth
+        run: |
+          git init -b main .
+          git remote add origin https://codeberg.org/rvhonorato/get-up-timer.git
+          git fetch --depth 1 origin "$GITHUB_SHA"
+          git -c advice.detachedHead=false checkout FETCH_HEAD
 
-      - name: Setup Rust cache
-        uses: https://github.com/Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2
-        with:
-          cache-on-failure: true
-
-      - name: Run tests
-        run: cargo test
-
-  clippy:
-    runs-on: codeberg-small
-    container:
-      image: docker.io/library/rust:1
-
-    steps:
-      - name: Checkout code
-        uses: https://code.forgejo.org/actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-
-      - name: Setup Rust cache
-        uses: https://github.com/Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2
-        with:
-          cache-on-failure: true
-
-      - name: Install clippy
-        run: rustup component add clippy
+      - name: Setup test env
+        # use prebuilt tarpaulin binary: `cargo install` take 10min+
+        run: |
+          rustup component add clippy
+          curl -sL https://github.com/xd009642/tarpaulin/releases/latest/download/cargo-tarpaulin-x86_64-unknown-linux-musl.tar.gz | tar xz -C /usr/local/bin
+          curl -Ls https://coverage.codacy.com/get.sh -o /tmp/codacy.sh
 
       - name: Run clippy
         run: cargo clippy -- -D warnings
 
-  coverage:
-    runs-on: codeberg-medium
-    container:
-      image: docker.io/library/rust:1
-
-    steps:
-      - name: Checkout code
-        uses: https://code.forgejo.org/actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-
-      - name: Setup Rust cache
-        uses: https://github.com/Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2
-        with:
-          cache-on-failure: true
-
-      - name: Install tarpaulin
-        # Prebuilt binary: `cargo install` compiles from source and would
-        # blow the 10-minute job limit on codeberg-medium
-        run: |
-          curl -sL https://github.com/xd009642/tarpaulin/releases/latest/download/cargo-tarpaulin-x86_64-unknown-linux-musl.tar.gz | tar xz -C /usr/local/bin
-
-      - name: Generate coverage
-        run: cargo tarpaulin --out Xml --output-dir ./coverage
+      - name: Run tests with coverage
+        run: cargo tarpaulin --engine llvm --out Xml --output-dir ./coverage
 
       - name: Upload coverage to Codacy
-        run: bash <(curl -Ls https://coverage.codacy.com/get.sh) report -r coverage/cobertura.xml
         env:
           CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}
+        run: |
+          if [ -n "$CODACY_PROJECT_TOKEN" ]; then
+            bash /tmp/codacy.sh report -r coverage/cobertura.xml
+          else
+            echo "CODACY_PROJECT_TOKEN not set, skipping upload"
+          fi
