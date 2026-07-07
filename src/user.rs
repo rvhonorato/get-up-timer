@@ -54,6 +54,7 @@ impl User {
                 "<span foreground='#fab387' weight='bold' size='x-large'>GET UP</span>".to_string()
             }
             State::Break => "<span foreground='#89b4fa'> ▪ </span>".to_string(),
+            State::Paused => "<span foreground='#6c7086'> ⏸ </span>".to_string(),
         }
     }
 
@@ -75,6 +76,7 @@ impl User {
                 "<span foreground='#89b4fa' weight='bold' size='x-large'>{}</span>",
                 timestamp
             ),
+            State::Paused => "<span foreground='#6c7086'> ⏸ paused </span>".to_string(),
         }
     }
 
@@ -91,6 +93,7 @@ impl User {
             State::Idle => format!("Idle: {}", timestamp),
             State::Alert => format!("Alert: {}", timestamp),
             State::Break => format!("Break: {}", timestamp),
+            State::Paused => "Paused".to_string(),
         };
 
         // Write icon file
@@ -140,6 +143,7 @@ pub enum State {
     Idle,
     Alert,
     Break,
+    Paused,
 }
 
 #[cfg(test)]
@@ -193,11 +197,23 @@ mod tests {
     }
 
     #[test]
+    fn test_message_paused() {
+        let state = State::Paused;
+        let message = match state {
+            State::Paused => "<span foreground='#6c7086'> ⏸ </span>".to_string(),
+            _ => unreachable!(),
+        };
+        assert!(message.contains("#6c7086"));
+        assert!(message.contains("⏸"));
+    }
+
+    #[test]
     fn test_state_equality() {
         assert_eq!(State::Active, State::Active);
         assert_eq!(State::Idle, State::Idle);
         assert_eq!(State::Alert, State::Alert);
         assert_eq!(State::Break, State::Break);
+        assert_eq!(State::Paused, State::Paused);
     }
 
     #[test]
@@ -206,6 +222,7 @@ mod tests {
         assert_eq!(format!("{:?}", State::Idle), "Idle");
         assert_eq!(format!("{:?}", State::Alert), "Alert");
         assert_eq!(format!("{:?}", State::Break), "Break");
+        assert_eq!(format!("{:?}", State::Paused), "Paused");
     }
 
     #[test]

@@ -1,5 +1,5 @@
 use std::fs;
-use std::path::Path;
+use std::path::PathBuf;
 use std::time::Instant;
 
 use crate::config::Config;
@@ -11,13 +11,19 @@ const NOTIFY_SCRIPT_FILE: &str = "/tmp/get-up-timer_notify";
 pub struct NotificationManager {
     last_notification: Option<Instant>,
     config: Config,
+    snooze_file: PathBuf,
 }
 
 impl NotificationManager {
     pub fn new(config: &Config) -> Self {
+        Self::with_snooze_file(config, PathBuf::from(SNOOZE_FILE))
+    }
+
+    fn with_snooze_file(config: &Config, snooze_file: PathBuf) -> Self {
         NotificationManager {
             last_notification: None,
             config: config.clone(),
+            snooze_file,
         }
     }
 
@@ -29,11 +35,7 @@ impl NotificationManager {
     }
 
     fn should_desktop_notify(&self) -> bool {
-        let path = Path::new(SNOOZE_FILE);
-        if path.exists() {
-            return false;
-        }
-        true
+        !self.snooze_file.exists()
     }
 
     pub fn send_notification(&mut self, state: State) {
@@ -57,6 +59,10 @@ impl NotificationManager {
             State::Break => {
                 self.write_notify_script();
                 self.last_notification = Some(Instant::now());
+            }
+            State::Paused => {
+                // Clear any pending notification when pausing
+                self.clear_notify_script();
             }
         }
     }
@@ -101,11 +107,18 @@ mod tests {
     use super::*;
     use crate::config::Config;
     use std::fs;
+    use std::path::Path;
+
+    // Snooze path that never exists, so tests are independent of the real
+    // /tmp/get_up_snooze flag file on the machine running them
+    fn absent_snooze() -> PathBuf {
+        std::env::temp_dir().join("get-up-timer_test_snooze_absent")
+    }
 
     #[test]
     fn test_notification_manager_new() {
         let config = Config::default();
-        let manager = NotificationManager::new(&config);
+        let manager = NotificationManager::with_snooze_file(&config, absent_snooze());
         assert!(manager.should_notify());
     }
 
@@ -115,7 +128,7 @@ mod tests {
         config.notifications.sound_enabled = true;
         config.notifications.desktop_notifications = true;
 
-        let manager = NotificationManager::new(&config);
+        let manager = NotificationManager::with_snooze_file(&config, absent_snooze());
         assert!(manager.should_notify());
     }
 
@@ -146,7 +159,7 @@ mod tests {
         config.notifications.sound_enabled = false;
         config.notifications.desktop_notifications = false;
 
-        let mut manager = NotificationManager::new(&config);
+        let mut manager = NotificationManager::with_snooze_file(&config, absent_snooze());
 
         manager.send_notification(State::Active);
         assert!(manager.last_notification.is_none());
@@ -161,5 +174,10 @@ mod tests {
         manager.last_notification = None;
         manager.send_notification(State::Break);
         assert!(manager.last_notification.is_some());
+
+        // Paused clears the notify script without recording a notification
+        manager.last_notification = None;
+        manager.send_notification(State::Paused);
+        assert!(manager.last_notification.is_none());
     }
 }

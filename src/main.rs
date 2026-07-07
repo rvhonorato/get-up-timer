@@ -7,9 +7,11 @@ use crate::config::Config;
 use crate::devices::InputDevices;
 use crate::notifications::NotificationManager;
 use crate::user::{State, User};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tracing::{info, warn};
 use tracing_subscriber::EnvFilter;
+
+const PAUSE_FILE: &str = "/tmp/get-up-timer_pause";
 
 fn main() {
     tracing_subscriber::fmt()
@@ -41,6 +43,21 @@ fn main() {
     loop {
         let device_active = devices.is_active();
         let elapsed_in_state = user.time_in_current_state();
+
+        let pause_requested = Path::new(PAUSE_FILE).exists();
+        if pause_requested && user.state != State::Paused {
+            warn!(
+                "State transition: {:?} -> Paused (pause file created)",
+                user.state
+            );
+            user.set_state(State::Paused);
+            notifier.send_notification(State::Paused);
+            last_inactive_time = None;
+        } else if !pause_requested && user.state == State::Paused {
+            warn!("State transition: Paused -> Idle (pause file removed)");
+            user.set_state(State::Idle);
+            last_inactive_time = None;
+        }
 
         match (&user.state, device_active) {
             (State::Idle, true) => {
@@ -125,6 +142,9 @@ fn main() {
                     last_inactive_time = None;
                 }
             }
+
+            // Paused: transitions are handled by the pause-file check above
+            (State::Paused, _) => {}
         };
 
         user.write_state_to_file();

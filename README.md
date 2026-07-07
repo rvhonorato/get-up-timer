@@ -74,8 +74,13 @@ Note: It must be executed as root to have access to your input devices.
 `get-up-timer` will write files to your `/tmp` directory, and these files can be used in `waybar`.
 
 - `get-up-timer_elapsed`: a timestamp display showing for how long user has been in a given state
-- `get-up-timer_icon`: a simplified display showing state indicators (green dot for Active, orange circle for Idle, "GET UP" text for Alert, blue square for Break)
+- `get-up-timer_icon`: a simplified display showing state indicators (green dot for Active, orange circle for Idle, "GET UP" text for Alert, blue square for Break, grey pause icon for Paused)
 - `get-up-timer_notify`: a notification script
+
+The daemon also watches for flag files in `/tmp` — create them to control it, remove them to undo:
+
+- `get-up-timer_pause`: while this file exists the timer is paused (state `Paused`, no alerts); removing it resets the timer to `Idle`
+- `get_up_snooze`: while this file exists desktop notifications are suppressed
 
 ```jsonc
   "custom/get-up-timer": {
@@ -83,7 +88,10 @@ Note: It must be executed as root to have access to your input devices.
     "interval": 1,
     "return-type": "json",
     "format": "{text}",
-    "tooltip-format": "{tooltip}"
+    "tooltip-format": "{tooltip}",
+    // left-click toggles pause, right-click toggles notification snooze
+    "on-click": "f=/tmp/get-up-timer_pause; [ -e \"$f\" ] && rm \"$f\" || touch \"$f\"",
+    "on-click-right": "f=/tmp/get_up_snooze; [ -e \"$f\" ] && rm \"$f\" || touch \"$f\""
   },
   "custom/get-up-timer-notify": {
     "exec": "[ -e \"/tmp/get-up-timer_notify\" ] && bash /tmp/get-up-timer_notify || echo ''",
