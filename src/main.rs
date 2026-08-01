@@ -31,7 +31,7 @@ fn main() {
         config.break_duration()
     );
 
-    let devices = InputDevices::new();
+    let mut devices = InputDevices::new();
     let mut user = User::new();
     let mut notifier = NotificationManager::new(&config);
 
