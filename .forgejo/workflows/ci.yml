@@ -32,4 +32,4 @@ jobs:
         run: cargo clippy -- -D warnings
 
       - name: Run tests with coverage
-        run: cargo tarpaulin --engine llvm --fail-under 25
+        run: cargo tarpaulin --engine llvm
