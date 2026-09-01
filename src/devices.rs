@@ -141,13 +141,18 @@ impl InputDevices {
     }
 }
 
-// Scan /dev/input/by-id/ for keyboard/mouse device nodes and open them.
+// Scan /dev/input/by-id/ for keyboard/mouse/joystick device nodes and open them.
 fn scan_devices() -> Vec<(String, File)> {
     let entries = fs::read_dir(INPUT_BY_ID).expect("Could not read devices");
     let mut input: Vec<(String, File)> = vec![];
     for entry in entries {
-        let loc = entry.unwrap().path().into_os_string().into_string().unwrap();
-        if loc.contains("kbd") || loc.contains("mouse") {
+        let loc = entry
+            .unwrap()
+            .path()
+            .into_os_string()
+            .into_string()
+            .unwrap();
+        if loc.contains("kbd") || loc.contains("mouse") || loc.contains("joystick") {
             input.push((loc.clone(), open_device(&loc)));
         }
     }
